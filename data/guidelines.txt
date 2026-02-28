@@ -1,0 +1,289 @@
+MEDICAL SAFETY GUIDELINES — Drug Interaction Advisor Knowledge Base
+Source: Beers Criteria 2023, FDA Drug Safety Communications, Clinical Pharmacology Standards
+======================================================================================
+
+--- ELDERLY PATIENT RULES (Age ≥ 65) ---
+
+RULE-E01: NSAIDs in Elderly Patients
+Drugs: Ibuprofen, Naproxen, Ketorolac, Diclofenac, Indomethacin
+Risk: HIGH
+Guideline (Beers Criteria): Avoid chronic use of oral NSAIDs in elderly patients unless
+alternatives are not effective and the patient can take a proton pump inhibitor (PPI)
+simultaneously. NSAIDs increase the risk of gastrointestinal bleeding, peptic ulcer
+disease, and acute kidney injury in patients aged 65 and older.
+Action: Flag all NSAID prescriptions for patients ≥65. Recommend acetaminophen as
+first-line alternative. If NSAID required, prescribe PPI prophylaxis.
+
+RULE-E02: Benzodiazepines in Elderly Patients
+Drugs: Diazepam, Lorazepam, Alprazolam, Clonazepam, Temazepam
+Risk: HIGH
+Guideline (Beers Criteria): Avoid benzodiazepines for any indication in older adults.
+Older adults have increased sensitivity to benzodiazepines and slower metabolism.
+Associated with cognitive impairment, delirium, falls, fractures, and motor vehicle
+accidents in older adults.
+Action: Contraindicated as first-line. If prescribed, use lowest dose, shortest duration.
+
+RULE-E03: Anticholinergic Drugs in Elderly Patients
+Drugs: Diphenhydramine, Amitriptyline, Hydroxyzine, Oxybutynin, Tolterodine
+Risk: HIGH
+Guideline (Beers Criteria): Avoid in older adults. Highly anticholinergic drugs cause
+confusion, dry mouth, constipation, and urinary retention. Associated with increased risk
+of cognitive decline and delirium.
+Action: Screen all prescriptions for anticholinergic burden. Avoid in patients ≥65.
+
+RULE-E04: Digoxin in Elderly Heart Failure Patients
+Drugs: Digoxin (Lanoxin)
+Risk: MODERATE
+Guideline (Beers Criteria): Avoid as first-line for atrial fibrillation or heart failure
+in elderly. If used, keep dose below 0.125 mg/day. Reduced renal clearance in elderly
+patients leads to digoxin accumulation and toxicity (nausea, arrhythmias).
+Action: If digoxin is used in patient ≥65, verify dose ≤0.125 mg/day.
+
+RULE-E05: Long-Acting Sulfonylureas in Elderly Diabetic Patients
+Drugs: Glyburide (Glibenclamide), Chlorpropamide
+Risk: HIGH
+Guideline (Beers Criteria): Avoid in elderly patients. Long-acting sulfonylureas cause
+prolonged hypoglycemia due to reduced renal clearance in older adults.
+Action: Use shorter-acting agents (glipizide, glimepiride) if sulfonylurea required.
+
+RULE-E06: Tramadol in Elderly Patients
+Drugs: Tramadol (Ultram)
+Risk: MODERATE
+Guideline (Beers Criteria): Avoid in older adults. Tramadol lowers seizure threshold and
+can cause serotonin syndrome when combined with serotonergic agents. Also associated with
+falls and hypoglycemia.
+Action: Flag tramadol prescriptions for patients ≥65. Consider alternative analgesics.
+
+RULE-E07: Z-Drugs (Non-benzodiazepine Hypnotics) in Elderly
+Drugs: Zolpidem (Ambien), Eszopiclone, Zaleplon
+Risk: HIGH
+Guideline (Beers Criteria): Avoid in older adults. Benzodiazepine-receptor agonists
+have similar adverse effects in older adults as benzodiazepines, including motor
+impairment, delirium, falls, and fractures.
+Action: Recommend sleep hygiene interventions and cognitive behavioral therapy for
+insomnia (CBT-I) as first-line alternatives.
+
+--- DRUG-DRUG INTERACTION RULES ---
+
+RULE-D01: Warfarin + NSAIDs (Aspirin, Ibuprofen, Naproxen)
+Severity: HIGH
+Mechanism: NSAIDs inhibit platelet aggregation AND displace warfarin from plasma
+protein binding, dramatically increasing free warfarin concentration and INR.
+Effect: Significantly increased risk of serious bleeding including GI hemorrhage and
+intracranial bleeding.
+Action: Avoid combination. If pain relief needed, use acetaminophen. Monitor INR closely
+if NSAID use is unavoidable.
+
+RULE-D02: Warfarin + Fluconazole (and other Azole Antifungals)
+Severity: HIGH
+Mechanism: Fluconazole inhibits CYP2C9, the primary enzyme responsible for warfarin
+metabolism. Results in dramatically elevated warfarin levels and INR.
+Effect: Serious bleeding risk. INR can triple within 3-5 days of starting fluconazole.
+Action: Avoid combination. If required, reduce warfarin dose by 25-50% and monitor INR
+every 2-3 days.
+
+RULE-D03: SSRIs + Tramadol (Serotonin Syndrome Risk)
+Severity: HIGH
+Drugs: Sertraline, Fluoxetine, Paroxetine, Escitalopram + Tramadol
+Mechanism: SSRIs inhibit serotonin reuptake. Tramadol also inhibits serotonin reuptake
+AND is a mu-opioid agonist. Combined use causes excessive serotonergic stimulation.
+Effect: Serotonin syndrome — agitation, confusion, hyperthermia, tachycardia, clonus,
+seizures. Can be fatal.
+Action: Contraindicated combination. Use alternative analgesic (not tramadol) in patients
+on SSRIs.
+
+RULE-D04: SSRIs + MAOIs (Absolute Contraindication)
+Severity: CONTRAINDICATED
+Drugs: Any SSRI + Phenelzine, Tranylcypromine, Selegiline, Linezolid, Methylene Blue
+Mechanism: MAOIs block serotonin breakdown. SSRIs increase serotonin release. Combined
+effect causes fatal serotonin toxicity.
+Effect: Fatal serotonin syndrome.
+Action: Absolutely contraindicated. Require 14-day washout after stopping MAOI before
+starting SSRI. Require 5-week washout after fluoxetine.
+
+RULE-D05: Metformin + NSAIDs in Renal Impairment
+Severity: MODERATE-HIGH
+Mechanism: NSAIDs reduce renal prostaglandin synthesis, decreasing GFR. This reduces
+metformin clearance, causing drug accumulation and lactic acidosis risk.
+Effect: Lactic acidosis — medical emergency with high mortality.
+Action: Avoid NSAIDs in patients on metformin with CKD (eGFR <60). Monitor renal
+function.
+
+RULE-D06: ACE Inhibitors / ARBs + NSAIDs
+Severity: MODERATE
+Drugs: Lisinopril, Ramipril, Enalapril, Losartan, Valsartan + Ibuprofen, Naproxen
+Mechanism: NSAIDs inhibit prostaglandin-mediated afferent arteriole dilation in kidneys,
+counteracting the renoprotective effect of ACE inhibitors/ARBs. Also causes sodium
+retention, reducing antihypertensive efficacy.
+Effect: Reduced blood pressure control, acute kidney injury, hyperkalemia.
+Action: Monitor renal function and potassium. Avoid chronic concurrent use.
+
+RULE-D07: Digoxin + Amiodarone
+Severity: HIGH
+Mechanism: Amiodarone inhibits P-glycoprotein, the primary efflux transporter for
+digoxin. Results in 1.5-2x increase in serum digoxin levels.
+Effect: Digoxin toxicity — nausea, bradycardia, heart block, ventricular arrhythmias.
+Action: Reduce digoxin dose by 30-50% when starting amiodarone. Monitor digoxin levels.
+
+RULE-D08: Sildenafil/Tadalafil + Nitrates (Absolute Contraindication)
+Severity: CONTRAINDICATED
+Drugs: Sildenafil, Tadalafil, Vardenafil + Isosorbide mononitrate, Isosorbide dinitrate,
+Glyceryl trinitrate (GTN/Nitroglycerin), Amyl nitrite
+Mechanism: Both PDE5 inhibitors and nitrates cause vasodilation via cGMP pathway.
+Combined effect results in massive, uncontrolled vasodilation.
+Effect: Life-threatening hypotension, syncope, myocardial infarction, death.
+Action: Absolutely contraindicated. Never prescribe together.
+
+RULE-D09: Lithium + NSAIDs
+Severity: HIGH
+Mechanism: NSAIDs reduce renal prostaglandin synthesis, decreasing GFR and lithium
+clearance. Lithium accumulates to toxic levels.
+Effect: Lithium toxicity — tremor, confusion, cardiac arrhythmias, seizures, renal failure.
+Action: Avoid NSAIDs in lithium patients. If pain relief needed, use acetaminophen.
+Monitor lithium levels if NSAID is unavoidable.
+
+RULE-D10: Simvastatin/Lovastatin + CYP3A4 Inhibitors
+Severity: HIGH
+Drugs: Simvastatin, Lovastatin + Amiodarone, Clarithromycin, Ketoconazole, Fluconazole,
+Erythromycin, Grapefruit juice (high quantities)
+Mechanism: CYP3A4 inhibitors block metabolism of simvastatin/lovastatin, causing
+significant accumulation.
+Effect: Myopathy and rhabdomyolysis — muscle breakdown leading to kidney failure.
+Action: Avoid combination. Use rosuvastatin or pravastatin (not CYP3A4-metabolized)
+as alternatives.
+
+RULE-D11: Azithromycin + QT-Prolonging Drugs
+Severity: HIGH
+Drugs: Azithromycin + Hydroxychloroquine, Haloperidol, Methadone, Sotalol, Amiodarone,
+Cisapride, Ondansetron
+Mechanism: Additive inhibition of cardiac hERG potassium channels, prolonging QT interval.
+Effect: Torsades de pointes — polymorphic ventricular tachycardia, cardiac arrest.
+Action: Avoid combinations. Obtain baseline ECG and monitor QTc interval.
+
+RULE-D12: Methotrexate + NSAIDs
+Severity: HIGH
+Mechanism: NSAIDs compete with methotrexate for renal tubular secretion via organic
+anion transporters, reducing methotrexate clearance and causing accumulation.
+Effect: Methotrexate toxicity — bone marrow suppression, mucositis, hepatotoxicity.
+Action: Avoid combination. If NSAID required, reduce methotrexate dose and monitor CBC.
+
+--- RENAL IMPAIRMENT RULES ---
+
+RULE-R01: NSAIDs in Chronic Kidney Disease
+Risk: HIGH
+Guideline: NSAIDs are relatively contraindicated in patients with CKD (eGFR <60).
+They reduce renal prostaglandin synthesis, causing vasoconstriction of the afferent
+arteriole and reducing GFR. Can precipitate acute-on-chronic kidney injury.
+Action: Avoid all NSAIDs in CKD patients. Acetaminophen is the preferred analgesic.
+
+RULE-R02: Metformin in Renal Impairment
+Risk: HIGH
+Guideline (FDA): Metformin is contraindicated when eGFR <30 mL/min/1.73m². Use with
+caution when eGFR 30-45. Risk of lactic acidosis increases proportionally with degree
+of renal impairment.
+Action: Check eGFR before prescribing. Dose reduce at eGFR 30-45. Discontinue if eGFR
+drops below 30.
+
+RULE-R03: Aminoglycosides in Renal Impairment
+Drugs: Gentamicin, Tobramycin, Amikacin
+Risk: HIGH
+Guideline: Aminoglycosides are nephrotoxic and ototoxic. Require significant dose
+adjustment based on renal function. TDM (therapeutic drug monitoring) mandatory.
+Action: Calculate dose adjustment using Cockcroft-Gault equation. Monitor serum levels.
+
+--- ALLERGY CROSS-REACTIVITY RULES ---
+
+RULE-A01: Penicillin Allergy — Beta-Lactam Cross-Reactivity
+Risk: HIGH
+Guideline: Patients with true penicillin allergy (IgE-mediated) may cross-react with
+cephalosporins (5-10% cross-reactivity) due to similar beta-lactam ring structures.
+Amoxicillin, ampicillin, piperacillin, and other penicillins are absolutely
+contraindicated. Cross-reactivity with cephalosporins is based on R1 side chain
+similarity.
+Action: Avoid all penicillins. Use with caution for cephalosporins, assess risk-benefit.
+Consider skin testing before using cephalosporins in high-risk patients.
+
+RULE-A02: NSAID Hypersensitivity — COX-1 Cross-Reactivity
+Risk: HIGH
+Guideline: Patients with aspirin-exacerbated respiratory disease (AERD) or aspirin/NSAID
+urticaria may react to any non-selective COX-1 inhibitor.
+Cross-reactive drugs: Ibuprofen, Naproxen, Ketorolac, Indomethacin, Diclofenac.
+COX-2 selective inhibitors (celecoxib) may be tolerated in some patients.
+Action: Screen for aspirin allergy/intolerance before prescribing any NSAID.
+
+RULE-A03: Sulfonamide Antibiotic Allergy
+Risk: MODERATE
+Guideline: True allergy to sulfonamide antibiotics (sulfamethoxazole) may predict
+reaction to non-antibiotic sulfonamides. Cross-reactivity is debated but clinically
+relevant for furosemide, thiazide diuretics, and celecoxib in high-sensitivity patients.
+Action: Exercise caution when prescribing sulfonamide-containing non-antibiotics to
+patients with sulfonamide antibiotic allergy.
+
+--- CARDIAC SAFETY RULES ---
+
+RULE-C01: Heart Failure + NSAIDs
+Risk: HIGH
+Guideline (ACC/AHA): NSAIDs are relatively contraindicated in patients with heart failure.
+They promote sodium and water retention, worsen fluid overload, and blunt the efficacy
+of diuretics and ACE inhibitors/ARBs.
+Action: Avoid NSAIDs in heart failure patients. Acetaminophen is preferred.
+
+RULE-C02: Non-Dihydropyridine CCBs in HFrEF
+Drugs: Verapamil, Diltiazem
+Risk: HIGH
+Guideline (ACC/AHA): Verapamil and diltiazem are contraindicated in HFrEF (ejection
+fraction <40%). Their negative inotropic effects worsen left ventricular function.
+Action: Use amlodipine or felodipine (dihydropyridine CCBs) if CCB required in HFrEF.
+
+RULE-C03: Beta-Blockers + Verapamil/Diltiazem Combination
+Risk: HIGH
+Guideline: Combining beta-blockers with non-dihydropyridine CCBs causes additive
+suppression of AV nodal conduction. Can result in complete heart block or severe
+bradycardia requiring pacemaker.
+Action: Avoid concurrent use. If required, use only under cardiology supervision with
+continuous monitoring.
+
+--- DIABETES-SPECIFIC RULES ---
+
+RULE-DB01: Corticosteroids in Diabetic Patients
+Drugs: Prednisone, Dexamethasone, Methylprednisolone, Prednisolone
+Risk: MODERATE
+Guideline: Corticosteroids cause dose-dependent hyperglycemia through gluconeogenesis
+stimulation and insulin resistance. Effect is most pronounced in the afternoon/evening
+with morning dosing.
+Action: Increase blood glucose monitoring frequency. Adjust diabetes medications.
+Consider insulin sliding scale in hospital settings.
+
+RULE-DB02: Fluoroquinolones in Diabetic Patients
+Drugs: Ciprofloxacin, Levofloxacin, Moxifloxacin
+Risk: MODERATE
+Guideline (FDA Warning): Fluoroquinolones can cause both hypoglycemia (especially
+with insulin or sulfonylureas) and hyperglycemia. Gatifloxacin is most problematic
+and should be avoided.
+Action: Monitor blood glucose closely during fluoroquinolone therapy in diabetic patients.
+
+--- GENERAL PRESCRIBING SAFETY PRINCIPLES ---
+
+PRINCIPLE-1: Polypharmacy Risk
+Patients on 5 or more medications are at significantly increased risk of adverse drug
+reactions and drug-drug interactions. Each additional drug increases interaction
+probability by approximately 10%.
+Action: Review entire medication list at each visit. Apply deprescribing principles.
+
+PRINCIPLE-2: Narrow Therapeutic Index Drugs
+The following drugs require extra vigilance: Warfarin, Digoxin, Lithium, Theophylline,
+Phenytoin, Methotrexate, Cyclosporine, Tacrolimus, Aminoglycosides.
+Any drug interaction involving these agents must be treated as high priority.
+Action: Therapeutic drug monitoring mandatory. Extra caution with any new co-prescription.
+
+PRINCIPLE-3: Renal and Hepatic Dose Adjustment
+Always check renal function (eGFR/creatinine) and liver function (ALT, bilirubin)
+before prescribing drugs with significant renal or hepatic elimination. Refer to
+prescribing information for dose adjustments.
+Action: Calculate eGFR using CKD-EPI equation. Adjust doses accordingly.
+
+PRINCIPLE-4: Pregnancy and Lactation Safety
+Category X and CONTRAINDICATED drugs in pregnancy include: ACE inhibitors (2nd/3rd
+trimester), Warfarin (1st trimester), NSAIDs (3rd trimester), Methotrexate, Thalidomide,
+Isotretinoin, Valproate (teratogenic).
+Action: Always screen for pregnancy before prescribing high-risk medications.
