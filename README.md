@@ -1,156 +1,55 @@
-# ⚕️ Drug Interaction Advisor
-### GPT-4o · LangChain ReAct · OpenFDA · FAISS · Beers Criteria · Streamlit
+# Drug Interaction Advisor
 
-> Clinical decision support prototype — for educational/development use only.
+An educational healthcare research prototype built with Streamlit, LangChain, FAISS, RxNorm, and OpenFDA. It is **not clinically validated**, does not grant prescribing approval, and is not medical advice. A licensed pharmacist or prescriber must review any treatment decision.
 
----
+## Setup
 
-## 📁 Project Structure
-
-```
-drug_advisor/
-├── data/
-│   └── guidelines.txt          # Medical safety rules (source for FAISS)
-├── faiss_store/                 # Auto-created by build_knowledge_base.py
-│   ├── guidelines.index
-│   └── chunks.pkl
-├── ui/
-│   └── main.py                 # Streamlit dashboard (Sprint 4)
-├── build_knowledge_base.py     # Sprint 1: Parse + embed guidelines → FAISS
-├── tools.py                    # Sprint 2: openfda_lookup, check_local_interactions, assess_patient_risk
-├── engine.py                   # Sprint 3: LangChain ReAct AgentExecutor
-├── requirements.txt
-├── .env.example
-└── README.md
-```
-
----
-
-## ⚡ Quick Start
-
-### 1. Install dependencies
 ```bash
+git clone https://github.com/gayatri-hacks/drug-interaction-advisor.git
+cd drug-interaction-advisor
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 2. Configure API keys
-```bash
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
-```
-
-### 3. Build the FAISS knowledge base (run once)
-```bash
-python build_knowledge_base.py
-```
-
-### 4. Launch the dashboard
-```bash
 streamlit run ui/main.py
 ```
 
-Opens at `http://localhost:8501`
+The default `LLM_PROVIDER=local` starts without an OpenAI or Groq key. It runs rule-based evidence reporting with public RxNorm and OpenFDA calls. Select `openai` or `groq` in the UI only after setting that provider's key; the selected provider is never silently substituted.
 
----
+Run tests:
 
-## 🧠 Architecture
-
-```
-Doctor inputs patient profile + new drug
-         │
-         ▼
-    Streamlit UI (ui/main.py)
-         │
-         ▼
-  engine.py — GPT-4o ReAct AgentExecutor
-         │
-    ┌────┴────────────────────────┐
-    │                             │
-    ▼                             ▼
-check_local_interactions    assess_patient_risk
-(HIGH_RISK_PAIRS dict)      (Allergy map + FAISS
-                             Beers Criteria +
-                             condition rules)
-    │                             │
-    └────────────┬────────────────┘
-                 │
-                 ▼
-          openfda_lookup
-        (OpenFDA REST API)
-                 │
-                 ▼
-       GPT-4o synthesizes
-       Final Safety Verdict
+```bash
+pytest                         # deterministic, mocked unit tests
+pytest -m live                 # opt-in calls to real RxNorm and OpenFDA
 ```
 
-### ReAct Loop in Terminal
-```
-Thought: I need to check if Ibuprofen interacts with Metformin and Lisinopril.
-Action: check_local_interactions
-Action Input: ["Metformin 500mg", "Lisinopril 10mg", "Ibuprofen 400mg"]
-Observation: [MODERATE] metformin + ibuprofen: NSAIDs reduce metformin clearance...
-             [MODERATE] lisinopril + ibuprofen: NSAIDs blunt ACE inhibitor effect...
+## Architecture
 
-Thought: Patient is 80 years old — must check Beers Criteria and allergies.
-Action: assess_patient_risk
-Action Input: ["Metformin 500mg", "Lisinopril 10mg", "Ibuprofen 400mg"]
-Observation: [BEERS HIGH] ibuprofen in elderly...
-             [CONDITION-HIGH] CKD + Ibuprofen: NSAIDs reduce GFR...
-
-Thought: I should check the FDA label for ibuprofen for additional warnings.
-Action: openfda_lookup
-Action Input: ibuprofen
-Observation: OpenFDA: NSAIDs may cause serious cardiovascular thrombotic events...
-
-Thought: I now have all findings needed for a complete safety assessment.
-Final Answer: OVERALL RISK: NOT RECOMMENDED...
+```text
+Streamlit → engine.py → RxNorm / local curated rules / FAISS guidelines / OpenFDA
+                         ↓
+                evidence-first local report
+                         ↓
+          optional LangChain OpenAI or Groq summary
 ```
 
----
+`tools.py` uses the live [RxNorm REST API](https://lhncbc.nlm.nih.gov/RxNav/APIs/index.html) for drug-name normalization and the live [OpenFDA drug-label API](https://open.fda.gov/apis/drug/label/) for label evidence. OpenFDA works without a key, subject to public rate limits. Each result explicitly distinguishes a record found, no record, timeout, network error, rate limit, and API error, and retains a source URL where available.
 
-## 🔧 Tools (Sprint 2)
+## Safety model and limitations
 
-| Tool | Source | What it checks |
-|------|--------|----------------|
-| `check_local_interactions` | Local dict (25+ pairs) | Drug-drug interactions with severity + mechanism |
-| `assess_patient_risk` | FAISS + allergy map | Beers Criteria (≥65), allergy conflicts, disease-drug contraindications |
-| `openfda_lookup` | OpenFDA REST API | Official FDA adverse reactions + black box warnings |
+- The local interaction and patient-risk rules are curated, incomplete screening aids. A missing rule is reported as **UNKNOWN**, never SAFE.
+- OpenFDA labels and RxNorm resolution are evidence sources, not complete interaction screening or patient-specific recommendations.
+- High-risk local findings control the displayed risk level. An optional AI summary is supplemental and cannot downgrade them.
+- The UI exposes tool summaries and source evidence, not private model reasoning.
+- Some FAISS guidance depends on the committed index; rebuild it with `python build_knowledge_base.py` when changing `data/guidelines.txt`.
 
----
+## Configuration
 
-## 🎨 Dashboard Features (Sprint 4)
+```dotenv
+LLM_PROVIDER=local             # local | openai | groq
+OPENAI_API_KEY=...             # needed only for openai
+GROQ_API_KEY=...               # needed only for groq
+OPENFDA_API_KEY=...            # optional; public access works without it
+```
 
-- **Risk Banner** — color-coded: 🟢 Safe / 🟡 Caution / 🔴 Not Recommended / 🟣 Contraindicated
-- **Safety Report** — structured sections: Drug Interactions, Patient Risks, FDA Data, Clinical Guidance
-- **AI Thinking Process expander** — full ReAct step-by-step trace (Thought → Action → Observation)
-- **Tools Called panel** — shows which tools the agent used
-- **6 preset test cases** — one-click loading of clinical edge cases
-
----
-
-## 🧪 Test Cases
-
-| Case | Expected |
-|------|----------|
-| Elderly Diabetic + NSAID (80y, CKD + Metformin → Ibuprofen) | NOT RECOMMENDED |
-| Warfarin + Aspirin | NOT RECOMMENDED |
-| Penicillin allergy + Amoxicillin | CONTRAINDICATED |
-| SSRI + Tramadol (serotonin syndrome) | NOT RECOMMENDED |
-| QT Prolongation (Hydroxychloroquine + Azithromycin) | NOT RECOMMENDED |
-| Nitrate + Sildenafil | CONTRAINDICATED |
-
----
-
-## 🔌 OpenFDA API
-
-OpenFDA is free and works without a key (limited to 40 requests/minute).
-For higher rate limits, register at: https://open.fda.gov/apis/authentication/
-Then add to `.env`: `OPENFDA_API_KEY=your-key`
-
----
-
-## ⚠️ Disclaimer
-
-For educational and development purposes only.
-Drug interaction databases are illustrative, not comprehensive.
-Always verify with a licensed clinical pharmacist before making prescribing decisions.
+GitHub Actions installs dependencies and runs the non-live pytest suite on pushes and pull requests.
