@@ -69,6 +69,8 @@ def rxnav_normalize(drug_name: str) -> dict:
         "drug_classes": [],
         "summary":      f"RxNorm: Could not resolve '{drug_name}' — using as-is.",
         "normalized":   False,
+        "status":       "unavailable",
+        "source_url":   None,
     }
 
     try:
@@ -78,15 +80,18 @@ def rxnav_normalize(drug_name: str) -> dict:
             params={"term": clean, "maxEntries": 1, "option": 1},
             timeout=REQUEST_TIMEOUT,
         )
+        result["source_url"] = resp.url
         resp.raise_for_status()
         candidates = resp.json().get("approximateGroup", {}).get("candidate", [])
 
         if not candidates:
+            result["status"] = "not_found"
             _rxnorm_cache[cache_key] = result
             return result
 
         rxcui = candidates[0].get("rxcui")
         if not rxcui:
+            result["status"] = "not_found"
             _rxnorm_cache[cache_key] = result
             return result
 
@@ -145,6 +150,7 @@ def rxnav_normalize(drug_name: str) -> dict:
             "tty":          tty,
             "drug_classes": drug_classes,
             "normalized":   True,
+            "status":       "success",
             "summary": (
                 f"RxNorm: '{drug_name}' → '{generic_name}' "
                 f"(RxCUI {rxcui}"
@@ -154,10 +160,13 @@ def rxnav_normalize(drug_name: str) -> dict:
         })
 
     except requests.exceptions.ConnectionError:
+        result["status"] = "network_error"
         result["summary"] = f"RxNorm: Network unavailable — using '{clean.lower()}' as-is."
     except requests.exceptions.Timeout:
+        result["status"] = "timeout"
         result["summary"] = f"RxNorm: Timeout for '{drug_name}' — using as-is."
     except Exception as e:
+        result["status"] = "api_error"
         result["summary"] = f"RxNorm: Error for '{drug_name}': {str(e)[:80]}"
 
     _rxnorm_cache[cache_key] = result
@@ -195,38 +204,66 @@ def openfda_lookup(drug_name: str) -> dict:
     if OPENFDA_KEY and OPENFDA_KEY not in ("your-openfda-key-here", ""):
         params["api_key"] = OPENFDA_KEY
 
+    attempts: list[dict] = []
+
     def _try(field: str, value: str):
         try:
             p = {**params, "search": f'{field}:"{value}"'}
             r = requests.get(OPENFDA_BASE, params=p, timeout=REQUEST_TIMEOUT)
+            attempts.append({"field": field, "status_code": r.status_code, "url": r.url})
             if r.status_code == 200:
                 data = r.json()
                 if data.get("results"):
-                    return data["results"][0]
-        except Exception:
-            pass
-        return None
+                    return data["results"][0], "success", r.url
+            if r.status_code == 404:
+                return None, "not_found", r.url
+            if r.status_code == 429:
+                return None, "rate_limited", r.url
+            return None, "api_error", r.url
+        except requests.exceptions.Timeout:
+            attempts.append({"field": field, "status_code": "timeout", "url": None})
+            return None, "timeout", None
+        except requests.exceptions.ConnectionError:
+            attempts.append({"field": field, "status_code": "network_error", "url": None})
+            return None, "network_error", None
+        except requests.RequestException:
+            attempts.append({"field": field, "status_code": "api_error", "url": None})
+            return None, "api_error", None
+        return None, "api_error", None
 
-    label = (
-        _try("openfda.generic_name",  search_name)
-        or _try("openfda.generic_name",  drug_name.lower())
-        or _try("openfda.brand_name",    drug_name)
-        or _try("openfda.substance_name", search_name)
-    )
+    label = None
+    status, source_url = "not_found", None
+    for field, value in (
+        ("openfda.generic_name", search_name),
+        ("openfda.generic_name", drug_name.lower()),
+        ("openfda.brand_name", drug_name),
+        ("openfda.substance_name", search_name),
+    ):
+        label, attempt_status, source_url = _try(field, value)
+        if label:
+            status = "success"
+            break
+        # A definitive service failure should not be presented as "no record".
+        if attempt_status in {"timeout", "network_error", "rate_limited", "api_error"}:
+            status = attempt_status
+            break
 
     base = {
         "drug": drug_name, "generic_name": search_name,
         "rxnorm": rxnorm,
         "adverse_reactions": [], "drug_interactions": [],
         "warnings": [], "boxed_warning": [],
+        "status": status, "source_url": source_url, "attempts": attempts,
     }
 
     if not label:
         return {
             **base, "found": False,
             "summary": (
-                f"OpenFDA: No label found for '{drug_name}' "
-                f"(searched: '{search_name}'). Try exact generic name."
+                (f"OpenFDA: No label record found for '{drug_name}' "
+                 f"(searched: '{search_name}')." if status == "not_found" else
+                 f"OpenFDA: {status.replace('_', ' ')} while retrieving '{drug_name}'. "
+                 "FDA label evidence is unavailable; this is not a negative finding.")
             ),
         }
 
@@ -259,7 +296,7 @@ def openfda_lookup(drug_name: str) -> dict:
         parts.append(f"Warnings: {warnings[0]}")
 
     return {
-        **base, "found": True,
+        **base, "found": True, "status": "success",
         "brand_name":        brand_names[0] if brand_names else drug_name,
         "adverse_reactions": adverse,
         "drug_interactions": interactions,
@@ -343,7 +380,7 @@ def check_local_interactions(drug_list: list[str]) -> dict:
                         break
 
     if not found:
-        summary = ("Local DB: No high-risk interactions found.\n"
+        summary = ("Local DB: No matching curated interactions found. Coverage is incomplete; this does NOT establish safety.\n"
                    "RxNorm resolutions:\n" + "\n".join(norm_log))
     else:
         lines = [
@@ -358,7 +395,7 @@ def check_local_interactions(drug_list: list[str]) -> dict:
             + "\n\n" + "\n".join(lines)
         )
 
-    return {"interactions": found, "count": len(found),
+    return {"interactions": found, "count": len(found), "coverage": "incomplete",
             "resolutions": resolutions, "summary": summary}
 
 
@@ -372,21 +409,17 @@ ALLERGY_MAP: dict[str, dict] = {
                    "severity_direct":"CONTRAINDICATED","severity_cross":"HIGH",
                    "mechanism":"Beta-lactam ring cross-reactivity"},
     "sulfa":      {"direct": ["sulfamethoxazole","sulfadiazine","sulfisoxazole"],
-                   "cross":  ["furosemide","hydrochlorothiazide","celecoxib"],
+                   "cross":  [],
                    "severity_direct":"HIGH","severity_cross":"MODERATE",
-                   "mechanism":"Sulfonamide moiety"},
+                   "mechanism":"Antimicrobial sulfonamide allergy; non-antimicrobial cross-reactivity is not assumed"},
     "aspirin":    {"direct": ["aspirin","acetylsalicylic"],
                    "cross":  ["ibuprofen","naproxen","ketorolac","indomethacin","diclofenac","meloxicam"],
                    "severity_direct":"HIGH","severity_cross":"HIGH",
                    "mechanism":"COX-1 hypersensitivity (AERD)"},
     "codeine":    {"direct": ["codeine","dihydrocodeine"],
-                   "cross":  ["morphine","oxycodone","hydrocodone","tramadol","hydromorphone"],
+                   "cross":  [],
                    "severity_direct":"HIGH","severity_cross":"MODERATE",
-                   "mechanism":"Opioid cross-reactivity"},
-    "contrast":   {"direct": ["iodinated contrast","contrast media"],
-                   "cross":  ["amiodarone","povidone-iodine"],
-                   "severity_direct":"HIGH","severity_cross":"MODERATE",
-                   "mechanism":"Iodine hypersensitivity"},
+                   "mechanism":"Reported opioid allergy requires clinical history; class-wide cross-reactivity is not assumed"},
 }
 
 

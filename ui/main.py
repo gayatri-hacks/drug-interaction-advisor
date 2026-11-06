@@ -29,7 +29,7 @@ st.set_page_config(
 )
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(r"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -206,17 +206,17 @@ def main():
 
     st.warning("⚠️ **Clinical decision support prototype only.** Not a substitute for pharmacist review.")
 
-    # API key check
-    api_key = os.getenv("OPENAI_API_KEY", "")
-    if not api_key or api_key == "sk-your-openai-key-here":
-        st.error("❌ **OPENAI_API_KEY not set.** Add it to your `.env` file and restart.")
-        st.code("OPENAI_API_KEY=sk-your-key-here", language="bash")
-        st.stop()
-
     # ── Sidebar ───────────────────────────────────────────────────────────────
     with st.sidebar:
         st.markdown("### ⚙️ API Status")
-        st.success(f"✅ OpenAI GPT-4o ({api_key[:8]}...)")
+        provider = st.selectbox("Analysis mode", ["local", "openai", "groq"], index=0,
+                                help="Local is keyless and uses transparent rules. AI modes add a supplemental summary only.")
+        if provider == "local":
+            st.info("ℹ️ Local-rule mode — no paid AI key required")
+        elif provider == "openai":
+            st.info("OpenAI selected. A missing key will be reported in the result.")
+        else:
+            st.info("Groq selected. A missing key will be reported in the result.")
 
         fda_key = os.getenv("OPENFDA_API_KEY", "")
         if fda_key and fda_key not in ("your-openfda-key-here", ""):
@@ -255,9 +255,9 @@ Resolves "Advil" → "ibuprofen"
 Official FDA drug label  
 *Free, optional key*
 
-**4. GPT-4o**  
-Synthesizes final verdict  
-*~$0.02 per analysis*
+**4. Optional AI summary**  
+OpenAI or Groq can summarize retrieved evidence.  
+*It cannot override local high-risk warnings.*
         """)
 
     # ── Input Form ────────────────────────────────────────────────────────────
@@ -326,7 +326,7 @@ Synthesizes final verdict
                         from engine import run_analysis
                         result = run_analysis(
                             age=age, allergies=allergies, conditions=conditions,
-                            current_drugs=cur_meds, new_drug=new_drug,
+                            current_drugs=cur_meds, new_drug=new_drug, provider=provider,
                         )
                         st.session_state["result"] = result
                     except Exception as e:
@@ -382,22 +382,15 @@ Synthesizes final verdict
 
             st.markdown("---")
 
-            # ── ReAct Thinking Process ────────────────────────────────────────
-            with st.expander("🧠 AI Thinking Process (ReAct Trace)", expanded=False):
-                st.caption(
-                    "Full step-by-step reasoning — every tool call and observation. "
-                    "Expand to verify how the agent reached its conclusion."
-                )
+            # ── Evidence / tool summaries ─────────────────────────────────────
+            with st.expander("🔎 Evidence and tool summaries", expanded=False):
+                st.caption("Retrieved source summaries and rule matches. Internal model reasoning is not displayed.")
                 steps = res.get("react_steps", [])
                 if steps:
                     for i, step in enumerate(steps, 1):
                         st.markdown(
-                            f'<div class="trace-thought">'
-                            f'<div class="trace-label" style="color:#60a5fa;">💭 Step {i} — Thought</div>'
-                            f'<div class="trace-body">{step.get("thought","")}</div>'
-                            f'</div>'
                             f'<div class="trace-action">'
-                            f'<div class="trace-label" style="color:#c084fc;">⚡ Action → {step.get("action","")}</div>'
+                            f'<div class="trace-label" style="color:#c084fc;">⚡ Tool → {step.get("action","")}</div>'
                             f'<div class="trace-body">{step.get("action_input","")[:300]}</div>'
                             f'</div>'
                             f'<div class="trace-obs">'
