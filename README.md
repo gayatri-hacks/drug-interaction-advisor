@@ -1,156 +1,72 @@
-# ⚕️ Drug Interaction Advisor
-### GPT-4o · LangChain ReAct · OpenFDA · FAISS · Beers Criteria · Streamlit
+# Drug Interaction Advisor
 
-> Clinical decision support prototype — for educational/development use only.
+An educational software prototype that evaluates a proposed medication against a deliberately limited curated rule set, patient-entered context, and live public medication sources. It is not clinically validated prescribing software.
 
----
+## Quick start (no paid LLM key)
 
-## 📁 Project Structure
-
-```
-drug_advisor/
-├── data/
-│   └── guidelines.txt          # Medical safety rules (source for FAISS)
-├── faiss_store/                 # Auto-created by build_knowledge_base.py
-│   ├── guidelines.index
-│   └── chunks.pkl
-├── ui/
-│   └── main.py                 # Streamlit dashboard (Sprint 4)
-├── build_knowledge_base.py     # Sprint 1: Parse + embed guidelines → FAISS
-├── tools.py                    # Sprint 2: openfda_lookup, check_local_interactions, assess_patient_risk
-├── engine.py                   # Sprint 3: LangChain ReAct AgentExecutor
-├── requirements.txt
-├── .env.example
-└── README.md
-```
-
----
-
-## ⚡ Quick Start
-
-### 1. Install dependencies
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 2. Configure API keys
-```bash
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
-```
-
-### 3. Build the FAISS knowledge base (run once)
-```bash
-python build_knowledge_base.py
-```
-
-### 4. Launch the dashboard
-```bash
 streamlit run ui/main.py
 ```
 
-Opens at `http://localhost:8501`
+To rebuild the optional FAISS knowledge base, install `pip install -r requirements-kb.txt` first. It is a standalone retrieval experiment: the runtime analysis path does **not** query this store or use it to determine risk.
 
----
+`AI_PROVIDER=local` is the default. It makes no LLM request and requires no LLM API key. RxNorm/NLM and OpenFDA are still called as real public REST integrations.
 
-## 🧠 Architecture
+Optional providers are selected explicitly in `.env`:
 
-```
-Doctor inputs patient profile + new drug
-         │
-         ▼
-    Streamlit UI (ui/main.py)
-         │
-         ▼
-  engine.py — GPT-4o ReAct AgentExecutor
-         │
-    ┌────┴────────────────────────┐
-    │                             │
-    ▼                             ▼
-check_local_interactions    assess_patient_risk
-(HIGH_RISK_PAIRS dict)      (Allergy map + FAISS
-                             Beers Criteria +
-                             condition rules)
-    │                             │
-    └────────────┬────────────────┘
-                 │
-                 ▼
-          openfda_lookup
-        (OpenFDA REST API)
-                 │
-                 ▼
-       GPT-4o synthesizes
-       Final Safety Verdict
+```bash
+AI_PROVIDER=openai
+OPENAI_API_KEY=...
+# or AI_PROVIDER=groq and GROQ_API_KEY=...
 ```
 
-### ReAct Loop in Terminal
-```
-Thought: I need to check if Ibuprofen interacts with Metformin and Lisinopril.
-Action: check_local_interactions
-Action Input: ["Metformin 500mg", "Lisinopril 10mg", "Ibuprofen 400mg"]
-Observation: [MODERATE] metformin + ibuprofen: NSAIDs reduce metformin clearance...
-             [MODERATE] lisinopril + ibuprofen: NSAIDs blunt ACE inhibitor effect...
+The deterministic assessment remains authoritative; optional-provider configuration never changes a risk flag.
 
-Thought: Patient is 80 years old — must check Beers Criteria and allergies.
-Action: assess_patient_risk
-Action Input: ["Metformin 500mg", "Lisinopril 10mg", "Ibuprofen 400mg"]
-Observation: [BEERS HIGH] ibuprofen in elderly...
-             [CONDITION-HIGH] CKD + Ibuprofen: NSAIDs reduce GFR...
+## Architecture
 
-Thought: I should check the FDA label for ibuprofen for additional warnings.
-Action: openfda_lookup
-Action Input: ibuprofen
-Observation: OpenFDA: NSAIDs may cause serious cardiovascular thrombotic events...
-
-Thought: I now have all findings needed for a complete safety assessment.
-Final Answer: OVERALL RISK: NOT RECOMMENDED...
+```text
+Streamlit presentation (ui/main.py)
+  -> orchestration and input validation (engine.py)
+     -> RxNorm/NLM normalization + OpenFDA labels (tools.py)
+     -> deterministic curated interaction/patient rules (tools.py)
+     -> evidence-limited report
 ```
 
----
+RxNorm is used to normalize medication names where its service responds. OpenFDA supplies FDA label data for review. A lookup failure, empty label, or unresolved medication is reported as missing/insufficient evidence; it is not converted to a negative clinical finding.
 
-## 🔧 Tools (Sprint 2)
+## Risk outcomes
 
-| Tool | Source | What it checks |
-|------|--------|----------------|
-| `check_local_interactions` | Local dict (25+ pairs) | Drug-drug interactions with severity + mechanism |
-| `assess_patient_risk` | FAISS + allergy map | Beers Criteria (≥65), allergy conflicts, disease-drug contraindications |
-| `openfda_lookup` | OpenFDA REST API | Official FDA adverse reactions + black box warnings |
+| Outcome | Meaning |
+| --- | --- |
+| `HIGH_RISK` | A high-severity curated interaction, allergy, or patient-specific rule matched. |
+| `CAUTION` | A lower-severity curated rule matched. |
+| `NO_CURATED_MATCH` | No matching local rule was found while a label was available; not a safety claim. |
+| `INSUFFICIENT_EVIDENCE` | Required upstream label evidence was unavailable or unreliable. |
+| `UNKNOWN` | Reserved for unexpected states. |
 
----
+FDA boxed warnings are displayed as label evidence, not automatically treated as a patient-specific contraindication.
 
-## 🎨 Dashboard Features (Sprint 4)
+Example: warfarin plus aspirin produces `HIGH_RISK` from the curated interaction rule. An unknown pair with a retrieved label produces `NO_CURATED_MATCH`, not “safe.”
 
-- **Risk Banner** — color-coded: 🟢 Safe / 🟡 Caution / 🔴 Not Recommended / 🟣 Contraindicated
-- **Safety Report** — structured sections: Drug Interactions, Patient Risks, FDA Data, Clinical Guidance
-- **AI Thinking Process expander** — full ReAct step-by-step trace (Thought → Action → Observation)
-- **Tools Called panel** — shows which tools the agent used
-- **6 preset test cases** — one-click loading of clinical edge cases
+## Testing and quality checks
 
----
+```bash
+python -m compileall -q engine.py tools.py ui build_knowledge_base.py
+python -m pytest
+RUN_LIVE_API_TESTS=1 python -m pytest tests/test_live_apis.py
+```
 
-## 🧪 Test Cases
+Unit tests mock all HTTP calls. Live tests are opt-in and skipped by default because public API availability is external to the test suite. CI performs dependency installation, compilation, unit tests, and a no-key local smoke test.
 
-| Case | Expected |
-|------|----------|
-| Elderly Diabetic + NSAID (80y, CKD + Metformin → Ibuprofen) | NOT RECOMMENDED |
-| Warfarin + Aspirin | NOT RECOMMENDED |
-| Penicillin allergy + Amoxicillin | CONTRAINDICATED |
-| SSRI + Tramadol (serotonin syndrome) | NOT RECOMMENDED |
-| QT Prolongation (Hydroxychloroquine + Azithromycin) | NOT RECOMMENDED |
-| Nitrate + Sildenafil | CONTRAINDICATED |
+## Limitations and error behavior
 
----
+- Curated rules are illustrative and incomplete; they cannot establish medication safety.
+- Public API calls use an 8-second timeout and two bounded retries for transient failures. Successful RxNorm resolutions use a one-hour in-process TTL; transient failures are never cached.
+- HTTP 404, 429, 5xx, malformed JSON, timeouts, empty labels, and unresolved names are surfaced in the report’s execution trace without stack traces or credentials.
+- The optional `build_knowledge_base.py` rebuild requires its listed FAISS/sentence-transformer dependencies and may download its embedding model. It produces a searchable local index, but is not connected to deterministic runtime assessment.
 
-## 🔌 OpenFDA API
-
-OpenFDA is free and works without a key (limited to 40 requests/minute).
-For higher rate limits, register at: https://open.fda.gov/apis/authentication/
-Then add to `.env`: `OPENFDA_API_KEY=your-key`
-
----
-
-## ⚠️ Disclaimer
-
-For educational and development purposes only.
-Drug interaction databases are illustrative, not comprehensive.
-Always verify with a licensed clinical pharmacist before making prescribing decisions.
+See [engineering decisions](docs/ENGINEERING_DECISIONS.md) and the [interview walkthrough](docs/INTERVIEW_WALKTHROUGH.md).

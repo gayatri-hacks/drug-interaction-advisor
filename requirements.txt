@@ -1,21 +1,10 @@
-# Drug Interaction Advisor — Requirements
-# pip install -r requirements.txt
+# Core runtime: local analysis needs no paid LLM credentials.
+requests>=2.31,<3
+python-dotenv>=1.0,<2
+streamlit>=1.35,<2
 
-# ── LLM & Agent ──────────────────────────────────────────────
-openai>=1.40.0
-langchain>=0.2.0
-langchain-core>=0.2.0
-langchain-openai>=0.1.20
-langchain-community>=0.2.0
+# Optional AI providers (only initialized when AI_PROVIDER is selected).
+openai>=1.40,<3
+groq>=0.11,<1
 
-# ── Vector Store ─────────────────────────────────────────────
-faiss-cpu>=1.7.4
-sentence-transformers>=2.2.0
-numpy>=1.24.0
-
-# ── UI ────────────────────────────────────────────────────────
-streamlit>=1.35.0
-
-# ── APIs & Utilities ──────────────────────────────────────────
-requests>=2.31.0           # OpenFDA + RxNorm
-python-dotenv>=1.0.0
+pytest>=8,<9
