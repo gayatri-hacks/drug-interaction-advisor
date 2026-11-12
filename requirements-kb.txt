@@ -1,0 +1,5 @@
+# Optional dependencies needed only to rebuild the local FAISS knowledge base.
+-r requirements.txt
+faiss-cpu>=1.7.4
+sentence-transformers>=2.2
+numpy>=1.24
