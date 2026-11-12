@@ -4,7 +4,6 @@ from __future__ import annotations
 import os
 import re
 import time
-from functools import lru_cache
 from itertools import combinations
 from typing import Any
 
@@ -16,6 +15,8 @@ REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "8"))
 MAX_RETRIES = int(os.getenv("HTTP_MAX_RETRIES", "2"))
 RXNAV_BASE = "https://rxnav.nlm.nih.gov/REST"
 OPENFDA_BASE = "https://api.fda.gov/drug/label.json"
+RXNORM_CACHE_TTL_SECONDS = int(os.getenv("RXNORM_CACHE_TTL_SECONDS", "3600"))
+_rxnorm_cache: dict[str, tuple[float, dict]] = {}
 
 
 def _request_json(url: str, *, params: dict[str, Any] | None = None) -> tuple[dict | None, str, int | None]:
@@ -53,9 +54,20 @@ def _clean_drug_name(name: str) -> str:
     return re.sub(r"\s+\d+\s*(?:mg|mcg|ml|g|iu|units?|tablets?|capsules?)\b.*", "", name, flags=re.I).strip()
 
 
-@lru_cache(maxsize=256)
 def rxnav_normalize(drug_name: str) -> dict:
+    """Resolve a name to RxNorm ingredients, caching successful responses only.
+
+    A network or parsing failure is deliberately not cached: a later analysis
+    should be able to retry the live service instead of inheriting a stale
+    transient failure.
+    """
     clean = _clean_drug_name(drug_name)
+    cache_key = clean.casefold()
+    cached = _rxnorm_cache.get(cache_key)
+    if cached and time.monotonic() - cached[0] < RXNORM_CACHE_TTL_SECONDS:
+        return dict(cached[1])
+    if cached:
+        _rxnorm_cache.pop(cache_key, None)
     result = {"generic_name": clean.lower(), "brand_name": drug_name, "rxcui": None, "tty": None, "drug_classes": [], "normalized": False, "evidence_status": "unresolved"}
     if not clean:
         result.update(summary="RxNorm: no medication name supplied.", evidence_status="invalid_input"); return result
@@ -69,7 +81,22 @@ def rxnav_normalize(drug_name: str) -> dict:
         result.update(evidence_status=prop_status, summary=f"RxNorm: matched '{clean}' but properties were unavailable; using entered name."); return result
     properties = props.get("properties", {})
     generic = str(properties.get("name", clean)).lower()
-    result.update(generic_name=generic, rxcui=rxcui, tty=properties.get("tty"), normalized=True, evidence_status="ok", summary=f"RxNorm: '{drug_name}' → '{generic}' (RxCUI {rxcui}).")
+    tty = properties.get("tty")
+    ingredients = [generic]
+    # Branded and packaged concepts are not reliably comparable to local
+    # ingredient rules. RxNorm's related IN concepts provide the appropriate
+    # active ingredient(s) when the endpoint supports the concept.
+    if tty in {"SBD", "SCD", "BPCK", "GPCK", "BN"}:
+        related, related_status, _ = _request_json(
+            f"{RXNAV_BASE}/rxcui/{rxcui}/related.json", params={"tty": "IN"}
+        )
+        concepts = (related or {}).get("relatedGroup", {}).get("conceptGroup", [])
+        resolved = [str(item.get("name", "")).lower() for group in concepts for item in group.get("conceptProperties", []) if item.get("name")]
+        if related_status == "ok" and resolved:
+            ingredients = list(dict.fromkeys(resolved))
+            generic = ingredients[0]
+    result.update(generic_name=generic, ingredients=ingredients, rxcui=rxcui, tty=tty, normalized=True, evidence_status="ok", summary=f"RxNorm: '{drug_name}' → '{', '.join(ingredients)}' (RxCUI {rxcui}).")
+    _rxnorm_cache[cache_key] = (time.monotonic(), dict(result))
     return result
 
 
@@ -115,8 +142,15 @@ def check_local_interactions(drug_list: list[str]) -> dict:
     generics, resolutions = normalize_drug_list(drug_list)
     found: list[dict] = []
     for (i, a), (j, b) in combinations(enumerate(generics), 2):
+        ingredients_a = set(resolutions[i].get("ingredients", [a]))
+        ingredients_b = set(resolutions[j].get("ingredients", [b]))
         for pair, evidence in HIGH_RISK_PAIRS.items():
-            if (a in pair and b in pair) or (len(pair) == 2 and any(token in a for token in pair) and any(token in b for token in pair)):
+            first, second = tuple(pair)
+            # Each side must match a distinct input medication and a distinct
+            # ingredient. Exact identity avoids false positives such as
+            # "aspirin-like" or unrelated substrings.
+            if ((first in ingredients_a and second in ingredients_b) or
+                    (second in ingredients_a and first in ingredients_b)):
                 found.append({"drug_a": drug_list[i], "drug_b": drug_list[j], "generic_a": a, "generic_b": b, **evidence}); break
     summary = f"Local curated rules: {len(found)} match(es)." if found else "Local curated rules: no match. A no-match is not a safety finding."
     return {"interactions": found, "count": len(found), "resolutions": resolutions, "summary": summary}

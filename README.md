@@ -12,7 +12,7 @@ cp .env.example .env
 streamlit run ui/main.py
 ```
 
-To rebuild the optional FAISS knowledge base, install `pip install -r requirements-kb.txt` first.
+To rebuild the optional FAISS knowledge base, install `pip install -r requirements-kb.txt` first. It is a standalone retrieval experiment: the runtime analysis path does **not** query this store or use it to determine risk.
 
 `AI_PROVIDER=local` is the default. It makes no LLM request and requires no LLM API key. RxNorm/NLM and OpenFDA are still called as real public REST integrations.
 
@@ -65,8 +65,8 @@ Unit tests mock all HTTP calls. Live tests are opt-in and skipped by default bec
 ## Limitations and error behavior
 
 - Curated rules are illustrative and incomplete; they cannot establish medication safety.
-- Public API calls use an 8-second timeout, two bounded retries for transient failures, and in-process RxNorm caching.
+- Public API calls use an 8-second timeout and two bounded retries for transient failures. Successful RxNorm resolutions use a one-hour in-process TTL; transient failures are never cached.
 - HTTP 404, 429, 5xx, malformed JSON, timeouts, empty labels, and unresolved names are surfaced in the report’s execution trace without stack traces or credentials.
-- The optional `build_knowledge_base.py` rebuild requires its listed FAISS/sentence-transformer dependencies and may download its embedding model.
+- The optional `build_knowledge_base.py` rebuild requires its listed FAISS/sentence-transformer dependencies and may download its embedding model. It produces a searchable local index, but is not connected to deterministic runtime assessment.
 
 See [engineering decisions](docs/ENGINEERING_DECISIONS.md) and the [interview walkthrough](docs/INTERVIEW_WALKTHROUGH.md).
