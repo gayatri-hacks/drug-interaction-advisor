@@ -6,6 +6,7 @@ configured, but never changes the computed risk level.
 from __future__ import annotations
 
 import os
+from html import escape
 from typing import Any
 
 from dotenv import load_dotenv
@@ -63,7 +64,30 @@ def generate_supplemental_summary(client: Any, provider: str, report: str) -> st
     return str(response.choices[0].message.content or "").strip()
 
 
-def _risk_from_evidence(interactions: list[dict], patient: dict, fda: dict) -> tuple[str, list[str]]:
+def _unresolved_names(resolutions: list[dict]) -> list[str]:
+    """Return entered names whose RxNorm normalization was not confirmed."""
+    return [
+        str(item.get("brand_name") or item.get("generic_name") or "unknown medication")
+        for item in resolutions
+        if item.get("evidence_status") != "ok" or not item.get("normalized")
+    ]
+
+
+def _safe_excerpt(values: list[str] | str | None, limit: int = 280) -> str | None:
+    """Bound a label excerpt and escape it before it reaches Markdown output."""
+    if isinstance(values, list):
+        text = " ".join(str(value) for value in values)
+    else:
+        text = str(values or "")
+    text = " ".join(text.split())
+    if not text:
+        return None
+    if len(text) > limit:
+        text = text[:limit].rstrip() + "…"
+    return escape(text, quote=True)
+
+
+def _risk_from_evidence(interactions: list[dict], patient: dict, fda: dict, resolutions: list[dict] | None = None) -> tuple[str, list[str]]:
     reasons: list[str] = []
     if any(item.get("severity") in {"CONTRAINDICATED", "HIGH"} for item in interactions):
         reasons.append("A curated high-severity drug interaction was found.")
@@ -75,6 +99,9 @@ def _risk_from_evidence(interactions: list[dict], patient: dict, fda: dict) -> t
         return "HIGH_RISK", reasons
     if interactions or patient.get("allergy_conflicts") or patient.get("beers_flags") or patient.get("condition_warnings"):
         return "CAUTION", ["A curated interaction or patient-specific caution was found."]
+    unresolved = _unresolved_names(resolutions or [])
+    if unresolved:
+        return "INSUFFICIENT_EVIDENCE", ["RxNorm could not confirm: " + ", ".join(unresolved) + "."]
     if fda.get("evidence_status") in {"timeout", "network_error", "http_error", "malformed_response", "rate_limited"}:
         return "INSUFFICIENT_EVIDENCE", ["The FDA label source could not be evaluated reliably."]
     if not fda.get("found"):
@@ -84,13 +111,24 @@ def _risk_from_evidence(interactions: list[dict], patient: dict, fda: dict) -> t
 
 def synthesize_locally(age: int, allergies: list[str], conditions: list[str], current_drugs: list[str], new_drug: str, interaction_result: dict, patient_risk_result: dict, fda_result: dict) -> str:
     """Render an evidence-limited report without prescribing recommendations."""
-    risk, reasons = _risk_from_evidence(interaction_result.get("interactions", []), patient_risk_result, fda_result)
+    resolutions = interaction_result.get("resolutions", [])
+    risk, reasons = _risk_from_evidence(interaction_result.get("interactions", []), patient_risk_result, fda_result, resolutions)
+    unresolved = _unresolved_names(resolutions)
+    if unresolved and not any(reason.startswith("RxNorm could not confirm:") for reason in reasons):
+        reasons.append("RxNorm could not confirm: " + ", ".join(unresolved) + ".")
     lines = [f"OVERALL RISK: {risk}", "", "DRUG INTERACTIONS:"]
     lines += [f"  - [{i.get('severity', 'UNKNOWN')}] {i.get('drug_a')} + {i.get('drug_b')}: {i.get('effect', '')}" for i in interaction_result.get("interactions", [])] or ["  - No curated interaction match found."]
     lines += ["", "PATIENT-SPECIFIC RISKS:"]
     patient_items = [c.get("message", "") for c in patient_risk_result.get("allergy_conflicts", [])] + [b.get("title", "") for b in patient_risk_result.get("beers_flags", [])] + patient_risk_result.get("condition_warnings", [])
     lines += [f"  - {item}" for item in patient_items if item] or ["  - No curated patient-specific rule matched."]
-    lines += ["", "FDA LABEL DATA:", f"  - {fda_result.get('summary', 'FDA label lookup was unavailable.')}", "", "EVIDENCE LIMITATION:"]
+    lines += ["", "FDA LABEL DATA:", f"  - {fda_result.get('summary', 'FDA label lookup was unavailable.')}"]
+    warning_excerpt = _safe_excerpt(fda_result.get("warnings"))
+    interaction_excerpt = _safe_excerpt(fda_result.get("drug_interactions"))
+    if warning_excerpt:
+        lines.append(f"  - FDA warning excerpt: {warning_excerpt}")
+    if interaction_excerpt:
+        lines.append(f"  - FDA interaction excerpt: {interaction_excerpt}")
+    lines += ["", "EVIDENCE LIMITATION:"]
     lines += [f"  - {reason}" for reason in reasons]
     lines += ["  - This educational prototype is not clinically validated prescribing software. Verify decisions with an appropriate licensed clinician or pharmacist.", "", "EXECUTION TRACE:", f"  - RxNorm: {fda_result.get('rxnorm', {}).get('evidence_status', 'not recorded')}", f"  - Local interaction rules: {len(interaction_result.get('interactions', []))} match(es)", f"  - OpenFDA: {fda_result.get('evidence_status', 'not recorded')}"]
     return "\n".join(lines)
@@ -104,7 +142,7 @@ def run_analysis(age: int, allergies: list[str], conditions: list[str], current_
     patient = assess_patient_risk(age, allergies, conditions, all_drugs)
     fda = openfda_lookup(new_drug)
     report = synthesize_locally(age, allergies, conditions, current_drugs, new_drug, interaction, patient, fda)
-    risk, _ = _risk_from_evidence(interaction["interactions"], patient, fda)
+    risk, _ = _risk_from_evidence(interaction["interactions"], patient, fda, interaction.get("resolutions", []))
     steps = [
         {"action": "check_local_interactions", "input": all_drugs, "status": "completed", "observation": interaction["summary"]},
         {"action": "assess_patient_risk", "input": all_drugs, "status": "completed", "observation": patient["summary"]},

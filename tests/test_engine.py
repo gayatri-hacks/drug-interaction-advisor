@@ -33,6 +33,39 @@ def test_missing_upstream_evidence(monkeypatch):
     monkeypatch.setattr(engine, "openfda_lookup", lambda name: {"found": False, "evidence_status": "timeout", "summary": "timeout", "rxnorm": {}})
     assert engine.run_analysis(30, [], [], [], "beta")["risk_level"] == "INSUFFICIENT_EVIDENCE"
 
+def test_unresolved_current_or_proposed_medication_is_insufficient_evidence(monkeypatch):
+    monkeypatch.setattr(engine, "check_local_interactions", lambda drugs: {
+        "interactions": [], "summary": "none",
+        "resolutions": [
+            {"brand_name": "unknown current", "normalized": False, "evidence_status": "unresolved"},
+            {"brand_name": "known proposed", "normalized": True, "evidence_status": "ok"},
+        ],
+    })
+    monkeypatch.setattr(engine, "assess_patient_risk", lambda *args: {"allergy_conflicts": [], "beers_flags": [], "condition_warnings": [], "summary": "none"})
+    monkeypatch.setattr(engine, "openfda_lookup", fda_ok)
+    result = engine.run_analysis(30, [], [], ["unknown current"], "known proposed")
+    assert result["risk_level"] == "INSUFFICIENT_EVIDENCE"
+    assert "RxNorm could not confirm: unknown current." in result["final_answer"]
+
+def test_high_risk_precedence_is_preserved_when_name_is_unresolved():
+    report = engine.synthesize_locally(30, [], [], [], "x", {
+        "interactions": [{"severity": "HIGH", "drug_a": "a", "drug_b": "b", "effect": "risk"}],
+        "resolutions": [{"brand_name": "unresolved", "normalized": False, "evidence_status": "unresolved"}],
+    }, {"allergy_conflicts": [], "beers_flags": [], "condition_warnings": []}, fda_ok("x"))
+    assert "OVERALL RISK: HIGH_RISK" in report
+    assert "RxNorm could not confirm: unresolved." in report
+
+def test_fda_excerpts_are_escaped_and_length_limited():
+    warning = "<script>alert('x')</script>" + "w" * 400
+    interaction = "<b>interaction</b>" + "i" * 400
+    report = engine.synthesize_locally(30, [], [], [], "x", {"interactions": [], "resolutions": []}, {"allergy_conflicts": [], "beers_flags": [], "condition_warnings": []}, {
+        **fda_ok("x"), "warnings": [warning], "drug_interactions": [interaction],
+    })
+    assert "FDA warning excerpt: &lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt;" in report
+    assert "FDA interaction excerpt: &lt;b&gt;interaction&lt;/b&gt;" in report
+    assert warning not in report and interaction not in report
+    assert "…" in report
+
 def test_high_rule_wins_over_fda_boxed_warning():
     report = engine.synthesize_locally(65, [], [], [], "x", {"interactions": [{"severity": "HIGH", "drug_a": "a", "drug_b": "b", "effect": "risk"}]}, {"allergy_conflicts": [], "beers_flags": [], "condition_warnings": []}, {"found": True, "evidence_status": "ok", "boxed_warning": ["warning"]})
     assert "OVERALL RISK: HIGH_RISK" in report
